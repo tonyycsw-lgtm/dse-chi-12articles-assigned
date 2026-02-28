@@ -329,7 +329,7 @@
     }
     .appreciation-title { border-color: #8b5cf6; color: #6d28d9; }
     .key-points-title { border-color: #059669; color: #065f46; }
-    .exam-questions-title { border-color: #d97706; color: #b45309; }
+    .short-answer-title { border-color: #d97706; color: #b45309; }
     .title-icon {
       font-size: 18px;
       display: flex;
@@ -349,7 +349,7 @@
       border: 1px solid #e2e8f0;
       position: relative;
     }
-    .appreciation-content, .key-points-content, .exam-questions-content {
+    .appreciation-content, .key-points-content, .short-answer-content {
       font-size: 13px;
       line-height: 1.9;
       color: #2d3748;
@@ -368,12 +368,12 @@
       padding-left: 12px;
       border-left: 3px solid #e2e8f0;
     }
-    .key-points-content .point-item, .exam-questions-content .qa-item {
+    .key-points-content .point-item, .short-answer-content .qa-item {
       margin-bottom: 16px;
       padding-left: 12px;
       border-left: 3px solid #e2e8f0;
     }
-    .key-points-content .point-item strong, .exam-questions-content .qa-item strong {
+    .key-points-content .point-item strong, .short-answer-content .qa-item strong {
       color: #4f46e5;
       font-weight: 600;
       display: inline-block;
@@ -439,10 +439,10 @@
       </div>
     </div>
 
-    <!-- 考試提問版 (動態載入) -->
-    <h2 class="section-title exam-questions-title" lang="zh"><span class="title-icon"><i class="fas fa-question-circle"></i></span> 考試提問版</h2>
-    <div class="interactive-section" id="exam-questions-section">
-      <div class="exam-questions-content" id="exam-questions-content">
+    <!-- 簡答題 (原考試提問版) -->
+    <h2 class="section-title short-answer-title" lang="zh"><span class="title-icon"><i class="fas fa-question-circle"></i></span> 簡答題</h2>
+    <div class="interactive-section" id="short-answer-section">
+      <div class="short-answer-content" id="short-answer-content">
         <!-- 由JavaScript動態填入 -->
       </div>
     </div>
@@ -638,7 +638,7 @@
       this.renderArticle(data, unitId);
       this.renderAppreciation(data);
       this.renderKeyPoints(data);
-      this.renderExamQuestions(data);
+      this.renderShortAnswer(data); // 改為簡答題
       this.attachHoverListeners(unitId);
       this.attachSliceTooltips();
       this.attachTranslationHoverTooltip(unitId);
@@ -730,9 +730,9 @@
       keyDiv.innerHTML = html;
     },
 
-    renderExamQuestions(data) {
-      const examDiv = document.getElementById('exam-questions-content');
-      if (!examDiv) return;
+    renderShortAnswer(data) {
+      const shortDiv = document.getElementById('short-answer-content');
+      if (!shortDiv) return;
 
       // 如果JSON中有 examQuestions，就使用它；否則顯示預設訊息
       if (data.examQuestions && data.examQuestions.questions && data.examQuestions.questions.length > 0) {
@@ -740,10 +740,10 @@
         data.examQuestions.questions.forEach(qa => {
           html += '<div class="qa-item"><div class="question">' + qa.question + '</div><div class="answer">' + qa.answer + '</div></div>';
         });
-        examDiv.innerHTML = html;
+        shortDiv.innerHTML = html;
       } else {
         // 預設提示
-        examDiv.innerHTML = '<p>此課文暫無考試提問</p>';
+        shortDiv.innerHTML = '<p>此課文暫無簡答題</p>';
       }
     },
 
