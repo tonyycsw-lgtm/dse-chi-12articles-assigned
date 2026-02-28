@@ -503,18 +503,62 @@
     }
   };
 
-  // 固定 tooltip 控制
+  // 固定 tooltip 控制 (方案二：改進自動生成邏輯)
   const FixedTooltip = {
     tooltipEl: document.getElementById('fixed-tooltip'),
     currentSliceId: null,
-    getPhraseMeaning(paraNum, sliceId, sliceText, sentenceIdx) {
-      if (!currentUnitData) return sliceText + '：待載入';
-      const para = currentUnitData.article.paragraphs[paraNum - 1];
-      if (para && para.translation_sentences && para.translation_sentences[sentenceIdx]) {
-        return para.translation_sentences[sentenceIdx];
+
+    // 輔助函數：取得切片在句子中的順序
+    getSliceOrderInSentence(paraNum, sentenceIdx, sliceId) {
+      const slices = [];
+      for (const key in window.sliceContents) {
+        const [p, s] = key.split('-').map(Number);
+        if (p === paraNum && window.sliceContents[key].sentenceIdx === sentenceIdx) {
+          slices.push({ sliceId: s, ...window.sliceContents[key] });
+        }
       }
-      return sliceText + '：無法取得翻譯';
+      slices.sort((a, b) => a.sliceId - b.sliceId);
+      const index = slices.findIndex(item => item.sliceId == sliceId);
+      return { order: index, total: slices.length };
     },
+
+    // 改進的 getPhraseMeaning：嘗試根據切片順序對應翻譯片段
+    getPhraseMeaning(paraNum, sliceId, sliceText, sentenceIdx) {
+      if (!currentUnitData) return '待載入';
+      const para = currentUnitData.article.paragraphs[paraNum - 1];
+      if (!para || !para.translation_sentences || !para.translation_sentences[sentenceIdx]) {
+        return '無法取得翻譯';
+      }
+      const fullTrans = para.translation_sentences[sentenceIdx];
+      
+      // 獲取該句子的所有切片資訊
+      const { order, total } = this.getSliceOrderInSentence(paraNum, sentenceIdx, sliceId);
+      
+      // 如果該句子只有一個切片，直接返回完整翻譯
+      if (total <= 1) {
+        return fullTrans;
+      }
+      
+      // 嘗試將完整翻譯按標點分割成片段（去除標點）
+      const transParts = fullTrans.split(/[，、；。！？：]/).map(p => p.trim()).filter(p => p !== '');
+      
+      // 如果分割後的片段數量與切片數量一致，則返回對應片段
+      if (transParts.length === total) {
+        return transParts[order];
+      }
+      
+      // 否則，嘗試在完整翻譯中查找包含切片文字（去除標點）的片段
+      const cleanSlice = sliceText.replace(/[，、；。！？：]/g, '');
+      for (let i = 0; i < transParts.length; i++) {
+        if (transParts[i].includes(cleanSlice)) {
+          return transParts[i];
+        }
+      }
+      
+      // 如果還找不到，返回完整翻譯並附加標記
+      return fullTrans + ' (片段)';
+    },
+
     generateSliceContent(paraNum, sliceId) {
       const sliceData = window.sliceContents?.[paraNum + '-' + sliceId];
       if (!sliceData) return '';
@@ -529,6 +573,7 @@
       if (vocabItems.length) html += '<div class="vocab-list">' + vocabItems.join('') + '</div>';
       return html;
     },
+
     show(paraNum, sliceId) {
       const key = paraNum + '-' + sliceId;
       if (this.currentSliceId === key && this.tooltipEl.classList.contains('show')) return;
@@ -538,6 +583,7 @@
       this.tooltipEl.innerHTML = content;
       this.tooltipEl.classList.add('show');
     },
+
     hide() {
       this.tooltipEl.classList.remove('show');
       this.currentSliceId = null;
@@ -775,7 +821,7 @@
         if (slice.hasAttribute('data-tooltip-bound')) return;
         slice.setAttribute('data-tooltip-bound', 'true');
         const paraNum = slice.dataset.para, sliceId = slice.dataset.sliceId;
-        slice.addEventListener('mouseenter', () => FixedTooltip.show(paraNum, sliceId));
+        slice.addEventListener('mouseenter', () => FixedTooltip.show(parseInt(paraNum), parseInt(sliceId)));
         slice.addEventListener('mouseleave', () => FixedTooltip.hide());
       });
     },
@@ -788,7 +834,7 @@
           const paraNum = e.target.dataset.para, sentenceIdx = e.target.dataset.sentenceIndex;
           if (!paraNum || sentenceIdx === undefined) return;
           const firstSlice = document.querySelector('#' + unitId + '_para' + paraNum + '-text .sentence-slice[data-sentence-idx="' + sentenceIdx + '"]');
-          if (firstSlice) FixedTooltip.show(paraNum, firstSlice.dataset.sliceId);
+          if (firstSlice) FixedTooltip.show(parseInt(paraNum), parseInt(firstSlice.dataset.sliceId));
         });
         trans.addEventListener('mouseleave', () => FixedTooltip.hide());
       });
